@@ -4,7 +4,7 @@ from time import time
 # Helper functions
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import cross_val_score
-from plot_helper import plot_scores_line, plot_scores_bar
+# from plot_helper import plot_scores_line, plot_scores_bar
 
 # MLP
 # from sklearn.neural_network import MLPClassifier as mlp
@@ -97,12 +97,12 @@ def test_hidden_layer_sizes(features, targets, plot_file_name=None):
         scores = cross_val_score(classifier, X_train, y_train, scoring=SCORING, cv=5, n_jobs=6)
         score_means.append(scores.mean())
 
-    if plot_file_name:
-        plot_scores_line(params=hidden_layer_sizes_opts,
-                    scores=score_means,
-                    title='hidden_layer_sizes vs %s' % SCORING,
-                    xlabel='Hidden layer size (neurons count)',
-                    file_name=plot_file_name)
+    # if plot_file_name:
+    #     plot_scores_line(params=hidden_layer_sizes_opts,
+    #                 scores=score_means,
+    #                 title='hidden_layer_sizes vs %s' % SCORING,
+    #                 xlabel='Hidden layer size (neurons count)',
+    #                 file_name=plot_file_name)
 
 def test_activation(features, targets, plot_file_name=None):
     X_train, X_test, y_train, y_test = train_test_split(features, targets, test_size=0.2, random_state=0)
@@ -144,13 +144,13 @@ def test_alpha(features, targets, plot_file_name=None):
         classifier = mlp(alpha=alpha)
         scores = cross_val_score(classifier, X_train, y_train, scoring=SCORING, cv=5, n_jobs=6)
         score_means.append(scores.mean())
-
-    if plot_file_name:
-        plot_scores_line(params=alpha_opts,
-                    scores=score_means,
-                    title='alpha_opts vs %s' % SCORING,
-                    xlabel='Alpha',
-                    file_name=plot_file_name)
+    #
+    # if plot_file_name:
+    #     plot_scores_line(params=alpha_opts,
+    #                 scores=score_means,
+    #                 title='alpha_opts vs %s' % SCORING,
+    #                 xlabel='Alpha',
+    #                 file_name=plot_file_name)
 
 def test_learning_rate(features, targets, plot_file_name=None):
     X_train, X_test, y_train, y_test = train_test_split(features, targets, test_size=0.2, random_state=0)
@@ -177,12 +177,12 @@ def test_learning_rate_init(features, targets, plot_file_name=None):
         scores = cross_val_score(classifier, X_train, y_train, scoring=SCORING, cv=5, n_jobs=6)
         score_means.append(scores.mean())
 
-    if plot_file_name:
-        plot_scores_line(params=learning_rate_init_opts,
-                    scores=score_means,
-                    title='learning_rate_init vs %s' % SCORING,
-                    xlabel='Learning Rate Init (with ADAM)',
-                    file_name=plot_file_name)
+    # if plot_file_name:
+    #     plot_scores_line(params=learning_rate_init_opts,
+    #                 scores=score_means,
+    #                 title='learning_rate_init vs %s' % SCORING,
+    #                 xlabel='Learning Rate Init (with ADAM)',
+    #                 file_name=plot_file_name)
 
 def test_power_t(features, targets, plot_file_name=None):
     X_train, X_test, y_train, y_test = train_test_split(features, targets, test_size=0.2, random_state=0)
@@ -193,12 +193,12 @@ def test_power_t(features, targets, plot_file_name=None):
         scores = cross_val_score(classifier, X_train, y_train, scoring=SCORING, cv=5, n_jobs=6)
         score_means.append(scores.mean())
 
-    if plot_file_name:
-        plot_scores_line(params=power_t_opts,
-                    scores=score_means,
-                    title='learning_rate vs %s' % SCORING,
-                    xlabel='Power T (with SGD)',
-                    file_name=plot_file_name)
+    # if plot_file_name:
+    #     plot_scores_line(params=power_t_opts,
+    #                 scores=score_means,
+    #                 title='learning_rate vs %s' % SCORING,
+    #                 xlabel='Power T (with SGD)',
+    #                 file_name=plot_file_name)
 
 def test_max_iterations(features, targets, plot_file_name=None):
     X_train, X_test, y_train, y_test = train_test_split(features, targets, test_size=0.2, random_state=0)
@@ -209,12 +209,12 @@ def test_max_iterations(features, targets, plot_file_name=None):
         scores = cross_val_score(classifier, X_train, y_train, scoring=SCORING, cv=5, n_jobs=6)
         score_means.append(scores.mean())
 
-    if plot_file_name:
-        plot_scores_line(params=max_iter_opts,
-                    scores=score_means,
-                    title='max_iter_opts vs %s' % SCORING,
-                    xlabel='Max Iterations',
-                    file_name=plot_file_name)
+    # if plot_file_name:
+    #     plot_scores_line(params=max_iter_opts,
+    #                 scores=score_means,
+    #                 title='max_iter_opts vs %s' % SCORING,
+    #                 xlabel='Max Iterations',
+    #                 file_name=plot_file_name)
 
 def test_momentum(features, targets, plot_file_name=None):
     X_train, X_test, y_train, y_test = train_test_split(features, targets, test_size=0.2, random_state=0)
@@ -225,12 +225,12 @@ def test_momentum(features, targets, plot_file_name=None):
         scores = cross_val_score(classifier, X_train, y_train, scoring=SCORING, cv=5, n_jobs=6)
         score_means.append(scores.mean())
 
-    if plot_file_name:
-        plot_scores_line(params=momentum_opts,
-                    scores=score_means,
-                    title='momentum vs %s' % SCORING,
-                    xlabel='Momentum (with SGD)',
-                    file_name=plot_file_name)
+    # if plot_file_name:
+    #     plot_scores_line(params=momentum_opts,
+    #                 scores=score_means,
+    #                 title='momentum vs %s' % SCORING,
+    #                 xlabel='Momentum (with SGD)',
+    #                 file_name=plot_file_name)
 
 def test_beta_1(features, targets, plot_file_name=None):
     X_train, X_test, y_train, y_test = train_test_split(features, targets, test_size=0.2, random_state=0)
@@ -241,12 +241,12 @@ def test_beta_1(features, targets, plot_file_name=None):
         scores = cross_val_score(classifier, X_train, y_train, scoring=SCORING, cv=5, n_jobs=6)
         score_means.append(scores.mean())
 
-    if plot_file_name:
-        plot_scores_line(params=beta_1_opts,
-                    scores=score_means,
-                    title='beta_1 vs %s' % SCORING,
-                    xlabel='Beta 1 (with ADAM)',
-                    file_name=plot_file_name)
+    # if plot_file_name:
+    #     plot_scores_line(params=beta_1_opts,
+    #                 scores=score_means,
+    #                 title='beta_1 vs %s' % SCORING,
+    #                 xlabel='Beta 1 (with ADAM)',
+    #                 file_name=plot_file_name)
 
 def test_beta_2(features, targets, plot_file_name=None):
     X_train, X_test, y_train, y_test = train_test_split(features, targets, test_size=0.2, random_state=0)
@@ -257,12 +257,12 @@ def test_beta_2(features, targets, plot_file_name=None):
         scores = cross_val_score(classifier, X_train, y_train, scoring=SCORING, cv=5, n_jobs=6)
         score_means.append(scores.mean())
 
-    if plot_file_name:
-        plot_scores_line(params=beta_2_opts,
-                    scores=score_means,
-                    title='beta_2 vs %s' % SCORING,
-                    xlabel='Beta 2 (with ADAM)',
-                    file_name=plot_file_name)
+    # if plot_file_name:
+    #     plot_scores_line(params=beta_2_opts,
+    #                 scores=score_means,
+    #                 title='beta_2 vs %s' % SCORING,
+    #                 xlabel='Beta 2 (with ADAM)',
+    #                 file_name=plot_file_name)
 
 def test_epsilon(features, targets, plot_file_name=None):
     X_train, X_test, y_train, y_test = train_test_split(features, targets, test_size=0.2, random_state=0)
@@ -273,12 +273,12 @@ def test_epsilon(features, targets, plot_file_name=None):
         scores = cross_val_score(classifier, X_train, y_train, scoring=SCORING, cv=5, n_jobs=6)
         score_means.append(scores.mean())
 
-    if plot_file_name:
-        plot_scores_line(params=epsilon_opts,
-                    scores=score_means,
-                    title='epsilon vs %s' % SCORING,
-                    xlabel='Epsilon (with ADAM)',
-                    file_name=plot_file_name)
+    # if plot_file_name:
+    #     plot_scores_line(params=epsilon_opts,
+    #                 scores=score_means,
+    #                 title='epsilon vs %s' % SCORING,
+    #                 xlabel='Epsilon (with ADAM)',
+    #                 file_name=plot_file_name)
 
 def test_n_iter_no_change(features, targets, plot_file_name=None):
     X_train, X_test, y_train, y_test = train_test_split(features, targets, test_size=0.2, random_state=0)
@@ -289,12 +289,12 @@ def test_n_iter_no_change(features, targets, plot_file_name=None):
         scores = cross_val_score(classifier, X_train, y_train, scoring=SCORING, cv=5, n_jobs=6)
         score_means.append(scores.mean())
 
-    if plot_file_name:
-        plot_scores_line(params=n_iter_no_change_opts,
-                    scores=score_means,
-                    title='n_iter_no_change_opts vs %s' % SCORING,
-                    xlabel='N Iteration no Change',
-                    file_name=plot_file_name)
+    # if plot_file_name:
+    #     plot_scores_line(params=n_iter_no_change_opts,
+    #                 scores=score_means,
+    #                 title='n_iter_no_change_opts vs %s' % SCORING,
+    #                 xlabel='N Iteration no Change',
+    #                 file_name=plot_file_name)
 
 # ========================================================================
 
