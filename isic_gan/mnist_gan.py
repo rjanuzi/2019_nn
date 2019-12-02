@@ -165,37 +165,37 @@ def generate_and_save_images(model, epoch, test_input):
       plt.axis('off')
 
   plt.savefig('image_at_epoch_{:04d}.png'.format(epoch))
-  plt.show()
+  # plt.show()
 
 train(train_dataset, EPOCHS)
 
 # Restore checkpoint
-checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+# checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
 
-# Display a single image using the epoch number
-def display_image(epoch_no):
-  return PIL.Image.open('image_at_epoch_{:04d}.png'.format(epoch_no))
+# # Display a single image using the epoch number
+# def display_image(epoch_no):
+#   return PIL.Image.open('image_at_epoch_{:04d}.png'.format(epoch_no))
+#
+# display_image(EPOCHS)
+#
+# anim_file = 'dcgan.gif'
+#
+# with imageio.get_writer(anim_file, mode='I') as writer:
+#   filenames = glob.glob('image*.png')
+#   filenames = sorted(filenames)
+#   last = -1
+#   for i,filename in enumerate(filenames):
+#     frame = 2*(i**0.5)
+#     if round(frame) > round(last):
+#       last = frame
+#     else:
+#       continue
+#     image = imageio.imread(filename)
+#     writer.append_data(image)
+#   image = imageio.imread(filename)
+#   writer.append_data(image)
 
-display_image(EPOCHS)
-
-anim_file = 'dcgan.gif'
-
-with imageio.get_writer(anim_file, mode='I') as writer:
-  filenames = glob.glob('image*.png')
-  filenames = sorted(filenames)
-  last = -1
-  for i,filename in enumerate(filenames):
-    frame = 2*(i**0.5)
-    if round(frame) > round(last):
-      last = frame
-    else:
-      continue
-    image = imageio.imread(filename)
-    writer.append_data(image)
-  image = imageio.imread(filename)
-  writer.append_data(image)
-
-import IPython
-from IPython import display
-if IPython.version_info > (6,2,0,''):
-  display.Image(filename=anim_file)
+# import IPython
+# from IPython import display
+# if IPython.version_info > (6,2,0,''):
+#   display.Image(filename=anim_file)

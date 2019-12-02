@@ -1,9 +1,17 @@
 import urllib.request
 import json
+import os
+from pathlib import Path
 
+DATASET_BASE_FOLDER = 'dataset'
 DATASET_LOCAL_PATH = 'dataset/raw'
 DATASET_LOCAL_INDEX_PATH = 'dataset/raw/index.json'
 ISIC_API_URL = 'https://isic-archive.com/api/v1/'
+
+if not Path(DATASET_BASE_FOLDER).exists():
+    os.mkdir(DATASET_BASE_FOLDER)
+if not Path(DATASET_LOCAL_PATH).exists():
+    os.mkdir(DATASET_LOCAL_PATH)
 
 def saveIndex(content):
     content = json.dumps(content)
@@ -60,12 +68,12 @@ def saveImg(fileName, data):
         print('[ERROR]: Oops, something really bad happend at saving a image')
         return False
 
-def downloadImgs(imgs=100, start_offset=0):
+def download_imgs(imgs=100, start_offset=0):
     index = loadIndex()
     index_keys = list(index.keys())
     downloaded = 0
     current_offset = start_offset
-    imgs_to_list = 200
+    imgs_to_list = 50
 
     while True:
 
