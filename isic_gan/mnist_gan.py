@@ -3,7 +3,7 @@ from tensorflow.keras import layers
 
 import glob
 import imageio
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import numpy as np
 import os
 import PIL
@@ -64,7 +64,7 @@ def make_discriminator_model():
 generator = make_generator_model()
 noise = tf.random.normal([1,100])
 generated_image = generator(noise, training=False)
-plt.imshow(generated_image[0, :, :, 0], cmap='gray')
+# plt.imshow(generated_image[0, :, :, 0], cmap='gray')
 # plt.show()
 
 # Test discriminator
@@ -157,14 +157,14 @@ def generate_and_save_images(model, epoch, test_input):
   # This is so all layers run in inference mode (batchnorm).
   predictions = model(test_input, training=False)
 
-  fig = plt.figure(figsize=(4,4))
+  # fig = plt.figure(figsize=(4,4))
 
-  for i in range(predictions.shape[0]):
-      plt.subplot(4, 4, i+1)
-      plt.imshow(predictions[i, :, :, 0] * 127.5 + 127.5, cmap='gray')
-      plt.axis('off')
+  # for i in range(predictions.shape[0]):
+  #     plt.subplot(4, 4, i+1)
+  #     plt.imshow(predictions[i, :, :, 0] * 127.5 + 127.5, cmap='gray')
+  #     plt.axis('off')
 
-  plt.savefig('image_at_epoch_{:04d}.png'.format(epoch))
+  # plt.savefig('image_at_epoch_{:04d}.png'.format(epoch))
   # plt.show()
 
 train(train_dataset, EPOCHS)
