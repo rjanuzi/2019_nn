@@ -13,7 +13,7 @@ if not Path(DATASET_BASE_FOLDER).exists():
 if not Path(DATASET_LOCAL_PATH).exists():
     os.mkdir(DATASET_LOCAL_PATH)
 
-def saveIndex(content):
+def save_index(content):
     content = json.dumps(content)
     try:
         file = open(DATASET_LOCAL_INDEX_PATH, 'wt')
@@ -22,19 +22,19 @@ def saveIndex(content):
     except:
         print('[ERROR]: Oops, something really wrong happend saving the index file.')
 
-def loadIndex():
+def load_index(filters={}):
     try:
         file = open(DATASET_LOCAL_INDEX_PATH, 'rt')
         content = file.read()
         file.close()
     except OSError:
         content = {}
-        saveIndex(content)
+        save_index(content)
         content = '{}'
     finally:
         return json.loads(content)
 
-def getImageList(imgs_to_list=100, offset=0):
+def get_image_list(imgs_to_list=100, offset=0):
     try:
         url = urllib.request.urlopen(ISIC_API_URL+'image?limit=%d&offset=%d' % (imgs_to_list, offset))
         return json.loads(url.read().decode())
@@ -42,7 +42,7 @@ def getImageList(imgs_to_list=100, offset=0):
         print('[ERROR]: Oops, something really bad happend at downloading the image list with offset %d' % offset)
         return []
 
-def getImageDetails(id):
+def get_image_details(id):
     try:
         url = urllib.request.urlopen(ISIC_API_URL+'image/%s' % id)
         return json.loads(url.read().decode())
@@ -50,7 +50,7 @@ def getImageDetails(id):
         print('[ERROR]: Oops, something really bad happend at downloading the image details with id %s' % id)
         return None
 
-def getImage(id):
+def fetch_image(id):
     try:
         url =  urllib.request.urlopen(ISIC_API_URL+'image/%s/download?contentDisposition=inline' % id)
         return url.read()
@@ -58,7 +58,7 @@ def getImage(id):
         print('[ERROR]: Oops, something really bad happend at downloading the image with id %s' % id)
         return b''
 
-def saveImg(fileName, data):
+def save_img(fileName, data):
     try:
         file = open('%s/%s.jpg' % (DATASET_LOCAL_PATH, fileName), "wb")
         file.write(data)
@@ -69,25 +69,25 @@ def saveImg(fileName, data):
         return False
 
 def download_imgs(imgs=100, start_offset=0):
-    index = loadIndex()
+    index = load_index()
     index_keys = list(index.keys())
     downloaded = 0
     current_offset = start_offset
-    imgs_to_list = 50
+    imgs_to_list = 200
 
     while True:
 
         if downloaded >= imgs:
             break
 
-        for img_ref in getImageList(imgs_to_list, current_offset):
+        for img_ref in get_image_list(imgs_to_list, current_offset):
 
             id = img_ref['_id']
 
             if id in index_keys:
                 continue # Ignore images that are already at index
 
-            img_details = getImageDetails(id)
+            img_details = get_image_details(id)
             if not img_details:
                 continue # Ignore if can't get image details
 
@@ -108,10 +108,10 @@ def download_imgs(imgs=100, start_offset=0):
                 print('[ERROR]: Image don\'t have the looked info (id: %s)' % id)
                 continue # Ignore images that don't have alll the looked information
 
-            if saveImg(img_details['name'], getImage(id)):
+            if save_img(img_details['name'], fetch_image(id)):
                 index[id] = image_details_temp
                 index_keys = list(index.keys())
-                saveIndex(index)
+                save_index(index)
                 downloaded += 1
                 if downloaded >= imgs:
                     break
@@ -120,8 +120,8 @@ def download_imgs(imgs=100, start_offset=0):
 
         print("%d downloaded imgs (%.2f) --- current_offset: %d" % (downloaded, (downloaded/imgs)*100, current_offset) )
 
-def getDatasetImageTypes():
-    index = loadIndex()
+def get_dataset_image_types():
+    index = load_index()
 
     types = []
 
@@ -132,8 +132,8 @@ def getDatasetImageTypes():
 
     return types
 
-def getDatasetImageDiagnosis():
-    index = loadIndex()
+def get_dataset_image_diagnosis():
+    index = load_index()
 
     types = []
 
@@ -144,8 +144,8 @@ def getDatasetImageDiagnosis():
 
     return types
 
-def getDatasetImageBenignMalignant():
-    index = loadIndex()
+def get_dataset_image_benign_malignant():
+    index = load_index()
     types = []
 
     for k,v in index.items():
@@ -155,8 +155,8 @@ def getDatasetImageBenignMalignant():
 
     return types
 
-def getDatasetConfirmationTypes():
-    index = loadIndex()
+def get_dataset_confirmation_types():
+    index = load_index()
 
     types = []
 
@@ -167,8 +167,8 @@ def getDatasetConfirmationTypes():
 
     return types
 
-def getDatasetAges():
-    index = loadIndex()
+def get_dataset_ages():
+    index = load_index()
 
     types = []
 
@@ -179,20 +179,20 @@ def getDatasetAges():
 
     return types
 
-def getDatasetSizes():
-    index = loadIndex()
+def get_dataset_sizes():
+    index = load_index()
 
     sizes = []
 
     for k,v in index.items():
-        vSizes = '%s_%s' % (v['size_x'], v['size_y'])
+        vSizes = '%s x %s' % (v['size_x'], v['size_y'])
         if vSizes not in sizes:
             sizes.append(vSizes)
 
     return sizes
 
-def getMelanocyticOptions():
-    index = loadIndex()
+def get_melanocytic_options():
+    index = load_index()
 
     types = []
 
@@ -203,8 +203,8 @@ def getMelanocyticOptions():
 
     return types
 
-def getDetailsByName(name):
-    index = loadIndex()
+def get_details_by_name(name):
+    index = load_index()
 
     for v in index.values():
         if v['name'] == name:
@@ -212,37 +212,9 @@ def getDetailsByName(name):
 
     return None
 
-def getImgPath(imgName):
-    return '%s/%s.jpg' % (DATASET_LOCAL_PATH, imgName)
+def get_img_path(img_name):
+    return '%s/%s.jpg' % (DATASET_LOCAL_PATH, img_name)
 
-def loadImage(imgName):
-    file = open(getImgPath(imgName), 'rb')
-    content = file.read()
-    file.close()
-    return content
-
-def saveTrainData(train_ins, train_outs, labels):
-    obj = {'_in':train_ins, '_out':train_outs, 'labels':labels}
-    file = open('dataset/traindata.json', 'wt')
-    file.write(json.dumps(obj))
-    file.close()
-
-def loadTrainData():
-    file = open('dataset/traindata.json', 'rt')
-    content = file.read()
-    file.close()
-    loaded = json.loads(content)
-    return loaded['_in'], loaded['_out'], loaded['labels']
-
-def saveTestData(test_ins, test_outs):
-    obj = {'_in':test_ins, '_out':test_outs}
-    file = open('dataset/testdata.json', 'wt')
-    file.write(json.dumps(obj))
-    file.close()
-
-def loadTestData():
-    file = open('dataset/testdata.json', 'rt')
-    content = file.read()
-    file.close()
-    loaded = json.loads(content)
-    return loaded['_in'], loaded['_out']
+def get_local_dataset_list(filters={}):
+    idx = list(load_index().values())
+    return list(filter(lambda i: all([i[k] in v for k,v in filters.items()]), idx))

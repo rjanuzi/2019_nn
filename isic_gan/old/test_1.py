@@ -57,8 +57,8 @@ def testModel(testIns, testOuts, model=None, imgLimit=None):
     loss, acc = model.evaluate(test_imgs, test_outputs)
     print("Model accuracy (Test data): {:5.2f}%".format(100*acc))
 
-trainIns, trainOuts, labels = dataset.loadTrainData()
-testIns, testOuts = dataset.loadTestData()
+trainIns, trainOuts, labels = dataset.load_train_data()
+testIns, testOuts = dataset.load_test_data()
 
 # trainModel(trainIns, trainOuts, imgLimit=2000)
 # testModel(testIns, testOuts, model, imgLimit=1000)

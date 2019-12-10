@@ -10,8 +10,8 @@ newWidth = 200
 channels = 3
 newSizeTensor = tf.constant([newHeight, newWidth])
 
-def loadJpegImgTensor(imgName):
-    return tf.image.decode_jpeg(dataset.loadImage(imgName), channels=3)
+def loadJpegImgTensor(img_name):
+    return tf.image.decode_jpeg(dataset.load_image(img_name), channels=3)
 
 def loadTensorData(imgTensor):
     return tf.Session().run(imgTensor)

@@ -18,7 +18,7 @@ def plot_bar_chart(groups, groups_vals):
 # plot_scatter(range(10), range(10))
 
 def plotClassesProportion(size_x=600, size_y=450):
-    index = dataset.loadIndex()
+    index = dataset.load_index()
 
     classes = {}
     for v in index.values():
@@ -46,7 +46,7 @@ def plotClassesProportion(size_x=600, size_y=450):
     plot_bar_chart(classes_array, classes_vals)
 
 def plotSizesProportion():
-    index = dataset.loadIndex()
+    index = dataset.load_index()
 
     sizes = {}
     for v in index.values():

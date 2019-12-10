@@ -23,7 +23,7 @@ def reshapeImgToOriginal(imgData):
     return imgData.reshape((150, 200, 3))
 
 def loadInputImgs():
-    trainIns, trainOuts, labels = dataset.loadTrainData()
+    trainIns, trainOuts, labels = dataset.load_train_data()
     imgs, _, _ = imageutil.loadPreparedImgsData(trainIns[:batch_size])
     newShapedImgs = []
 

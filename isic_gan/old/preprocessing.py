@@ -20,7 +20,7 @@ def respectTheRule(i):
 
     return respectDermoscopic and respectSize and respectBenignMalignant and respectDiagnosisConfirm
 
-def filterIndex(index=dataset.loadIndex()):
+def filterIndex(index=dataset.load_index()):
     filteredKeys = list(filter(lambda k: respectTheRule(index[k]), index.keys()))
     filteredImgs = {}
     for k in filteredKeys:
@@ -94,7 +94,7 @@ def getTrainingSets(testProportion=.2):
             trainIns.append(k)
             trainOuts.append(v)
 
-    # Change the imgId by the imgName
+    # Change the imgId by the img_name
     for i in range(len(trainIns)):
         trainIns[i] = index[trainIns[i]]['name']
     for i in range(len(testIns)):
