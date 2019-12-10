@@ -3,6 +3,9 @@ import json
 import os
 from pathlib import Path
 
+from PIL import Image
+import numpy as np
+
 DATASET_BASE_FOLDER = 'dataset'
 DATASET_LOCAL_PATH = 'dataset/raw'
 DATASET_LOCAL_INDEX_PATH = 'dataset/raw/index.json'
@@ -218,3 +221,33 @@ def get_img_path(img_name):
 def get_local_dataset_list(filters={}):
     idx = list(load_index().values())
     return list(filter(lambda i: all([i[k] in v for k,v in filters.items()]), idx))
+
+def prepare_data(train_percentage=0.8, img_width=128, img_length=128, max_imgs_to_use=256):
+    '''
+    This function loads and prepare the image data from database, providing a
+    train list and a test list of data
+    '''
+    def convert_to_array(img_name):
+        im = Image.open(get_img_path(img_name))
+        return np.asarray(im.resize((img_width, img_length)))
+
+    data = get_local_dataset_list({'type': ['dermoscopic']})[:max_imgs_to_use]
+    for i in data:
+        i['X'] = convert_to_array(i['name']) / 255.0 # Normalize pixel values to be between 0 and 1
+        i['y'] = 0 if i['benign_malignant'] == 'benign' else 1
+
+    split_idx = int(len(data)*train_percentage)
+    train_data = data[:split_idx]
+    test_data = data[split_idx:]
+
+    train_X, train_y = [], []
+    for t in train_data:
+        train_X.append(t['X'])
+        train_y.append(t['y'])
+
+    test_X, test_y = [], []
+    for t in test_data:
+        test_X.append(t['X'])
+        test_y.append(t['y'])
+
+    return np.asarray(train_X), np.asarray(train_y), np.asarray(test_X), np.asarray(test_y)
