@@ -20,7 +20,7 @@ USE_EXISTING_MODEL = True
 DEFAULT_WIDTH = 512
 DEFAULT_LENGTH = 512
 MAX_IMGS_TO_USE = 8192
-EPOCHS = 200
+EPOCHS = 500
 
 def show_normalized_img(norm_img_array):
     im = Image.fromarray((norm_img_array*255.0).astype('uint8'))
@@ -41,7 +41,7 @@ def create_model():
     model.add(layers.Dense(64, activation='relu'))
     model.add(layers.Dense(1, activation='softmax'))
 
-    # model.summary()
+    model.summary()
 
     # Compile model
     model.compile(optimizer='adam',

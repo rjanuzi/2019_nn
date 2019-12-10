@@ -228,8 +228,8 @@ def prepare_data(train_percentage=0.8, img_width=128, img_length=128, max_imgs_t
     train list and a test list of data
     '''
     def convert_to_array(img_name):
-        im = Image.open(get_img_path(img_name))
-        return np.asarray(im.resize((img_width, img_length)))
+        with Image.open(get_img_path(img_name)) as im:
+            return np.asarray(im.resize((img_width, img_length)))
 
     data = get_local_dataset_list({'type': ['dermoscopic']})[:max_imgs_to_use]
     for i in data:
