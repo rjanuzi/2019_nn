@@ -11,7 +11,7 @@ import logging
 from _telegram import send_simple_message
 
 FORMAT = '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
-logging.basicConfig(filename=r'cnn_benign_milignant.log', level=logging.INFO, format=FORMAT)
+logging.basicConfig(filename=r'cnn_benign_malignant.log', level=logging.INFO, format=FORMAT)
 
 MODEL_BKP_NAME = 'benign_malignant_model.h5'
 USE_EXISTING_MODEL = True
