@@ -1,193 +1,190 @@
 import tensorflow as tf
-from tensorflow.keras import layers
+from tensorflow.keras import layers, models
 
+import os
+from time import time
 from PIL import Image
 import numpy as np
 
 from dataset import  prepare_gan_data
+from _telegram import send_simple_message, send_img
 
-IMGS_WIDTH = 256
-IMGS_LENGTH = 256
-IMGS_TO_USE = 5
-BATCH_SIZE = 32
+import logging
+import traceback
 
-train_images = prepare_gan_data(IMGS_WIDTH, IMGS_LENGTH, IMGS_TO_USE, benign_malignant=True)
+FORMAT = '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
+logging.basicConfig(filename=r'skin_cancer_gan.log', level=logging.INFO, format=FORMAT)
+
+TELEGRAM_ON = True
+
+GENERATOR_MODEL_BKP_NAME = 'gan_generator_model.h5'
+DISCRIMINATOR_MODEL_BKP_NAME = 'gan_discriminator_model.h5'
+USE_EXISTING_MODEL = False
+
+IMGS_SIZE = 256
+IMGS_TO_USE = 4096
+BATCH_SIZE = 256
+NOISE_DIM = 100
+EPOCHS = 500
+EXAMPLES_TO_GENERATE = 5
+
+def send_telegram(msg):
+    if TELEGRAM_ON:
+        try:
+            send_simple_message(msg)
+        except:
+            logging.error('Error sending telegram msg: %s' % msg)
+
+def send_telegram_img(img_path):
+    if TELEGRAM_ON:
+        try:
+            send_img(img_path)
+        except:
+            logging.error('Error sending telegram img: %s' % img_path)
 
 def make_generator_model():
     model = tf.keras.Sequential()
-    model.add(layers.Dense(7*7*(256), use_bias=False, input_shape=(IMGS_WIDTH, IMGS_LENGTH, 3)))
+    model.add(layers.Dense(32*32*(256), use_bias=False, input_shape=(NOISE_DIM,)))
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
-    model.add(layers.Reshape((7, 7, 256)))
-    assert model.output_shape == (None, 7, 7, 256) # Note: None is the batch size
+    model.add(layers.Reshape((32, 32, 256)))
+    assert model.output_shape == (None, 32, 32, 256) # Note: None is the batch size
 
-    model.add(layers.Conv2DTranspose(128, (5, 5), strides=(1, 1), padding='same', use_bias=False))
-    assert model.output_shape == (None, 7, 7, 128)
+    model.add(layers.Conv2DTranspose(256, (2, 2), strides=(1, 1), padding='same', use_bias=False))
+    assert model.output_shape == (None, 32, 32, 256)
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
-    model.add(layers.Conv2DTranspose(64, (5, 5), strides=(2, 2), padding='same', use_bias=False))
-    assert model.output_shape == (None, 14, 14, 64)
+    model.add(layers.Conv2DTranspose(128, (5, 5), strides=(2, 2), padding='same', use_bias=False))
+    assert model.output_shape == (None, 64, 64, 128)
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
-    model.add(layers.Conv2DTranspose(1, (5, 5), strides=(2, 2), padding='same', use_bias=False, activation='tanh'))
-    assert model.output_shape == (None, 28, 28, 1)
+    model.add(layers.Conv2DTranspose(128, (10, 10), strides=(2, 2), padding='same', use_bias=False))
+    assert model.output_shape == (None, 128, 128, 128)
+    model.add(layers.BatchNormalization())
+    model.add(layers.LeakyReLU())
+
+    model.add(layers.Conv2DTranspose(3, (5, 5), strides=(2, 2), padding='same', use_bias=False, activation='tanh'))
+    assert model.output_shape == (None, IMGS_SIZE, IMGS_SIZE, 3)
 
     return model
 
 def make_discriminator_model():
-    model = tf.keras.Sequential()
-    model.add(layers.Conv2D(64, (5, 5), strides=(2, 2), padding='same',
-                                     input_shape=(IMGS_WIDTH, IMGS_LENGTH, 3)))
+    model = models.Sequential()
+    model.add(layers.Conv2D(128, (2, 2), strides=(1, 1), padding='same',
+                                     input_shape=(IMGS_SIZE, IMGS_SIZE, 3)))
     model.add(layers.LeakyReLU())
-    model.add(layers.Dropout(0.3))
+    model.add(layers.Dropout(0.2))
 
-    model.add(layers.Conv2D(128, (5, 5), strides=(2, 2), padding='same'))
+    model.add(layers.Conv2D(128, (5, 5), strides=(1, 1), padding='same'))
     model.add(layers.LeakyReLU())
-    model.add(layers.Dropout(0.3))
+    model.add(layers.Dropout(0.2))
+
+    model.add(layers.Conv2D(128, (10, 10), strides=(2, 2), padding='same'))
+    model.add(layers.LeakyReLU())
+    model.add(layers.Dropout(0.2))
 
     model.add(layers.Flatten())
     model.add(layers.Dense(1))
 
     return model
 
-# Test generator
-generator = make_generator_model()
-noise = tf.random.normal([1,100])
-print(noise)
-# generated_image = generator(noise, training=False)
+def show_generated_img(generated_data):
+    img = Image.fromarray(np.uint8((generated_image[0]+128)*2))
+    img.show()
 
-# # Test discriminator
-# discriminator = make_discriminator_model()
-# decision = discriminator(generated_image)
-# # print(decision)
-#
-# # Define Losses and optimizers
-#
-# # This method returns a helper function to compute cross entropy loss
-# cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
-#
-# def discriminator_loss(real_output, fake_output):
-#     real_loss = cross_entropy(tf.ones_like(real_output), real_output)
-#     fake_loss = cross_entropy(tf.zeros_like(fake_output), fake_output)
-#     total_loss = real_loss + fake_loss
-#     return total_loss
-#
-# def generator_loss(fake_output):
-#     return cross_entropy(tf.ones_like(fake_output), fake_output)
-#
-# generator_optimizer = tf.keras.optimizers.Adam(1e-4)
-# discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
-#
-# # Configure checkpoints
-# checkpoint_dir = 'training_checkpoints'
-# checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
-# checkpoint = tf.train.Checkpoint(generator_optimizer=generator_optimizer,
-#                                  discriminator_optimizer=discriminator_optimizer,
-#                                  generator=generator,
-#                                  discriminator=discriminator)
-#
-# # Training loop
-# EPOCHS = 50
-# noise_dim = 100
-# num_examples_to_generate = 16
-#
-# # We will reuse this seed overtime (so it's easier)
-# # to visualize progress in the animated GIF)
-# seed = tf.random.normal([num_examples_to_generate, noise_dim])
-#
-# # Notice the use of `tf.function`
-# # This annotation causes the function to be "compiled".
-# @tf.function
-# def train_step(images):
-#     noise = tf.random.normal([BATCH_SIZE, noise_dim])
-#
-#     with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
-#       generated_images = generator(noise, training=True)
-#
-#       real_output = discriminator(images, training=True)
-#       fake_output = discriminator(generated_images, training=True)
-#
-#       gen_loss = generator_loss(fake_output)
-#       disc_loss = discriminator_loss(real_output, fake_output)
-#
-#     gradients_of_generator = gen_tape.gradient(gen_loss, generator.trainable_variables)
-#     gradients_of_discriminator = disc_tape.gradient(disc_loss, discriminator.trainable_variables)
-#
-#     generator_optimizer.apply_gradients(zip(gradients_of_generator, generator.trainable_variables))
-#     discriminator_optimizer.apply_gradients(zip(gradients_of_discriminator, discriminator.trainable_variables))
-#
-# def train(dataset, epochs):
-#   for epoch in range(epochs):
-#     start = time.time()
-#
-#     for image_batch in dataset:
-#       train_step(image_batch)
-#
-#     # Produce images for the GIF as we go
-#     # display.clear_output(wait=True)
-#     generate_and_save_images(generator,
-#                              epoch + 1,
-#                              seed)
-#
-#     # Save the model every 15 epochs
-#     if (epoch + 1) % 15 == 0:
-#       checkpoint.save(file_prefix = checkpoint_prefix)
-#
-#     print ('Time for epoch {} is {} sec'.format(epoch + 1, time.time()-start))
-#
-#   # Generate after the final epoch
-#   # display.clear_output(wait=True)
-#   generate_and_save_images(generator,
-#                            epochs,
-#                            seed)
-#
-# def generate_and_save_images(model, epoch, test_input):
-#   # Notice `training` is set to False.
-#   # This is so all layers run in inference mode (batchnorm).
-#   predictions = model(test_input, training=False)
-#
-#   # fig = plt.figure(figsize=(4,4))
-#
-#   # for i in range(predictions.shape[0]):
-#   #     plt.subplot(4, 4, i+1)
-#   #     plt.imshow(predictions[i, :, :, 0] * 127.5 + 127.5, cmap='gray')
-#   #     plt.axis('off')
-#
-#   # plt.savefig('image_at_epoch_{:04d}.png'.format(epoch))
-#   # plt.show()
-#
-# train(train_dataset, EPOCHS)
-#
-# # Restore checkpoint
-# # checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
-#
-# # # Display a single image using the epoch number
-# # def display_image(epoch_no):
-# #   return PIL.Image.open('image_at_epoch_{:04d}.png'.format(epoch_no))
-# #
-# # display_image(EPOCHS)
-# #
-# # anim_file = 'dcgan.gif'
-# #
-# # with imageio.get_writer(anim_file, mode='I') as writer:
-# #   filenames = glob.glob('image*.png')
-# #   filenames = sorted(filenames)
-# #   last = -1
-# #   for i,filename in enumerate(filenames):
-# #     frame = 2*(i**0.5)
-# #     if round(frame) > round(last):
-# #       last = frame
-# #     else:
-# #       continue
-# #     image = imageio.imread(filename)
-# #     writer.append_data(image)
-# #   image = imageio.imread(filename)
-# #   writer.append_data(image)
-#
-# # import IPython
-# # from IPython import display
-# # if IPython.version_info > (6,2,0,''):
-# #   display.Image(filename=anim_file)
+def save_generated_img(generated_img, file_name):
+    img = Image.fromarray(np.uint8((generated_img+128)*2))
+    img.save(r'generated_imgs\%s.jpeg' % file_name)
+
+def discriminator_loss(real_output, fake_output):
+    real_loss = cross_entropy(tf.ones_like(real_output), real_output)
+    fake_loss = cross_entropy(tf.zeros_like(fake_output), fake_output)
+    total_loss = real_loss + fake_loss
+    return total_loss
+
+def generator_loss(fake_output):
+    return cross_entropy(tf.ones_like(fake_output), fake_output)
+
+# Notice the use of `tf.function`
+# This annotation causes the function to be "compiled".
+@tf.function
+def train_step(images):
+    noise = np.random.randn(BATCH_SIZE, NOISE_DIM)
+
+    with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
+      generated_images = generator(noise, training=True)
+
+      real_output = discriminator(images, training=True)
+      fake_output = discriminator(generated_images, training=True)
+
+      gen_loss = generator_loss(fake_output)
+      disc_loss = discriminator_loss(real_output, fake_output)
+
+    gradients_of_generator = gen_tape.gradient(gen_loss, generator.trainable_variables)
+    gradients_of_discriminator = disc_tape.gradient(disc_loss, discriminator.trainable_variables)
+
+    generator_optimizer.apply_gradients(zip(gradients_of_generator, generator.trainable_variables))
+    discriminator_optimizer.apply_gradients(zip(gradients_of_discriminator, discriminator.trainable_variables))
+
+last_img_path = ''
+def train(dataset, epochs):
+    for epoch in range(epochs):
+        start = time()
+
+        for image_batch in dataset:
+            train_step(image_batch)
+
+        epoch_id = (epoch+1)
+        if epoch_id % 5 == 0:
+            generator.save(GENERATOR_MODEL_BKP_NAME)
+            discriminator.save(DISCRIMINATOR_MODEL_BKP_NAME)
+            temp_images = generator(seeds, training=False)
+
+            for seed_id in range(len(seeds)):
+                save_generated_img(temp_images[seed_id], '%d_%d_generated' % (seed_id, epoch_id))
+                last_img_path = r'generated_imgs\%d_%d_generated.jpeg' % (seed_id, epoch_id)
+
+            send_telegram('Training reached epoch %d (%.2f %%)' % (epoch_id, (epoch_id/EPOCHS)*100.0))
+            logging.info('Time for epoch %d is %.2f seconds.' % (epoch_id, time()-start))
+            print('Time for epoch %d is %.2f seconds.' % (epoch_id, time()-start))
+
+        if epoch_id % 15 == 0:
+            send_telegram_img(last_img_path)
+
+# Starting...
+# ===============================================================================================
+try:
+    send_telegram('Preparing data...')
+    train_images = prepare_gan_data(IMGS_SIZE, IMGS_SIZE, IMGS_TO_USE, benign_malignant=True)
+    train_images = train_images.reshape(train_images.shape[0], IMGS_SIZE, IMGS_SIZE, 3).astype('float32')
+    train_dataset = tf.data.Dataset.from_tensor_slices(train_images).shuffle(IMGS_TO_USE).batch(BATCH_SIZE)
+    seeds = np.random.randn(EXAMPLES_TO_GENERATE, NOISE_DIM)
+
+    send_telegram('Creating models')
+    if USE_EXISTING_MODEL:
+        try:
+            generator = models.load_model(GENERATOR_MODEL_BKP_NAME)
+            discriminator = models.load_mode(DISCRIMINATOR_MODEL_BKP_NAME)
+        except:
+            logging.error('Error loading models... creating a fresh one')
+            generator = make_generator_model()
+            discriminator = make_discriminator_model()
+    else:
+        generator = make_generator_model()
+        discriminator = make_discriminator_model()
+
+    cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+    generator_optimizer = tf.keras.optimizers.Adam(1e-4)
+    discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
+
+    send_telegram('Starting training')
+    train(train_dataset, EPOCHS)
+
+    send_telegram('Skin Cancer GAN training ended.')
+except:
+    logging.error(traceback.format_exc())
+    send_telegram('Some error occured')
+    send_telegram('%s' % traceback.format_exc())

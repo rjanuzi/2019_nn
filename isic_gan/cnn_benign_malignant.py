@@ -62,7 +62,7 @@ class Model_BKP(callbacks.Callback):
     def on_epoch_end(self, epoch, logs={}):
         if epoch % 25 == 0:
             logging.info('Updating model... epoch %d (%.2f %%)' % (epoch, (epoch/EPOCHS)*100.0))
-            self.model.save('benign_malignant_model.h5')
+            self.model.save(MODEL_BKP_NAME)
             send_telegram('Training reached epoch %d (%.2f %%)' % (epoch, (epoch/EPOCHS)*100.0))
 
 # Starting...
