@@ -15,18 +15,18 @@ import traceback
 FORMAT = '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
 logging.basicConfig(filename=r'skin_cancer_gan.log', level=logging.INFO, format=FORMAT)
 
-TELEGRAM_ON = True
+TELEGRAM_ON = False
 
 GENERATOR_MODEL_BKP_NAME = 'gan_generator_model.h5'
 DISCRIMINATOR_MODEL_BKP_NAME = 'gan_discriminator_model.h5'
 USE_EXISTING_MODEL = False
 
-IMGS_SIZE = 256
-IMGS_TO_USE = 4096
-BATCH_SIZE = 64
+IMGS_SIZE = 128
+IMGS_TO_USE = 16
+BATCH_SIZE = 4
 NOISE_DIM = 100
 EPOCHS = 500
-EXAMPLES_TO_GENERATE = 5
+EXAMPLES_TO_GENERATE = 1
 
 def send_telegram(msg):
     if TELEGRAM_ON:
@@ -44,20 +44,20 @@ def send_telegram_img(img_path):
 
 def make_generator_model():
     model = tf.keras.Sequential()
-    model.add(layers.Dense(32*32*(256), use_bias=False, input_shape=(NOISE_DIM,)))
+    model.add(layers.Dense(16*16*(128), use_bias=False, input_shape=(NOISE_DIM,)))
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
-    model.add(layers.Reshape((32, 32, 256)))
-    assert model.output_shape == (None, 32, 32, 256) # Note: None is the batch size
+    model.add(layers.Reshape((16, 16, 128)))
+    assert model.output_shape == (None, 16, 16, 128) # Note: None is the batch size
 
-    model.add(layers.Conv2DTranspose(256, (2, 2), strides=(1, 1), padding='same', use_bias=False))
-    assert model.output_shape == (None, 32, 32, 256)
+    model.add(layers.Conv2DTranspose(128, (2, 2), strides=(1, 1), padding='same', use_bias=False))
+    assert model.output_shape == (None, 16, 16, 128)
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
     model.add(layers.Conv2DTranspose(128, (5, 5), strides=(4, 4), padding='same', use_bias=False))
-    assert model.output_shape == (None, 128, 128, 128)
+    assert model.output_shape == (None, 64, 64, 128)
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
