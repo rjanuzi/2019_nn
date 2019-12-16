@@ -112,7 +112,7 @@ def generator_loss(fake_output):
 # This annotation causes the function to be "compiled".
 @tf.function
 def train_step(images):
-    noise = np.random.randn(len(images), NOISE_DIM)
+    noise = np.random.randn(len(BATCH_SIZE), NOISE_DIM)
 
     with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
       generated_images = generator(noise, training=True)
