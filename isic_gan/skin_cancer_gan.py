@@ -112,7 +112,7 @@ def generator_loss(fake_output):
 # This annotation causes the function to be "compiled".
 @tf.function
 def train_step(images):
-    noise = np.random.randn(BATCH_SIZE, NOISE_DIM)
+    noise = np.random.randn(len(images), NOISE_DIM)
 
     with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
       generated_images = generator(noise, training=True)
@@ -134,8 +134,10 @@ def train(dataset, epochs):
     for epoch in range(epochs):
         start = time()
 
-        for image_batch in dataset:
-            train_step(image_batch)
+        last_batch_idx = 0
+        for batch_idx in range(BATCH_SIZE, len(dataset)+1, BATCH_SIZE):
+            train_step(dataset[last_batch_idx:batch_idx])
+            last_batch_idx = batch_idx
 
         epoch_id = (epoch+1)
         if epoch_id % 5 == 0:
@@ -160,7 +162,6 @@ try:
     send_telegram('Preparing data...')
     train_images = prepare_gan_data(IMGS_SIZE, IMGS_SIZE, IMGS_TO_USE, benign_malignant=True)
     train_images = train_images.reshape(train_images.shape[0], IMGS_SIZE, IMGS_SIZE, 3).astype('float32')
-    train_dataset = tf.data.Dataset.from_tensor_slices(train_images).shuffle(IMGS_TO_USE).batch(BATCH_SIZE)
     seeds = np.random.randn(EXAMPLES_TO_GENERATE, NOISE_DIM)
 
     send_telegram('Creating models')
@@ -181,7 +182,7 @@ try:
     discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
 
     send_telegram('Starting training')
-    train(train_dataset, EPOCHS)
+    train(train_images, EPOCHS)
 
     send_telegram('Skin Cancer GAN training ended.')
 except:
