@@ -11,6 +11,15 @@ DATASET_LOCAL_PATH = 'dataset/raw'
 DATASET_LOCAL_INDEX_PATH = 'dataset/raw/index.json'
 ISIC_API_URL = 'https://isic-archive.com/api/v1/'
 
+CLASSES = ['nevus',
+            'melanoma',
+            'seborrheic keratosis',
+            'lichenoid keratosis',
+            'dermatofibroma',
+            'angioma',
+            'basal cell carcinoma',
+            None]
+
 if not Path(DATASET_BASE_FOLDER).exists():
     os.mkdir(DATASET_BASE_FOLDER)
 if not Path(DATASET_LOCAL_PATH).exists():
@@ -222,19 +231,24 @@ def get_local_dataset_list(filters={}):
     idx = list(load_index().values())
     return list(filter(lambda i: all([i[k] in v for k,v in filters.items()]), idx))
 
-def prepare_data(train_percentage=0.8, img_width=128, img_length=128, max_imgs_to_use=256):
+def convert_to_array(img_name, img_width, img_length):
+    with Image.open(get_img_path(img_name)) as im:
+        img_array = np.asarray(im.resize((img_width, img_length)))
+        # return img_array / 255.0 # Normalize the images to [0, 1]
+        return (img_array-127.5) / 127.5 # Normalize the images to [-1, 1]
+
+def prepare_classification_data(train_percentage=0.8, img_width=128, img_length=128, max_imgs_to_use=256, classify_benign_malignant=True):
     '''
     This function loads and prepare the image data from database, providing a
     train list and a test list of data
     '''
-    def convert_to_array(img_name):
-        with Image.open(get_img_path(img_name)) as im:
-            return np.asarray(im.resize((img_width, img_length)))
-
     data = get_local_dataset_list({'type': ['dermoscopic']})[:max_imgs_to_use]
-    for i in data:
-        i['X'] = convert_to_array(i['name']) / 255.0 # Normalize pixel values to be between 0 and 1
-        i['y'] = 0 if i['benign_malignant'] == 'benign' else 1
+    for d in data:
+        d['X'] = convert_to_array(d['name'], img_width, img_length)
+        if classify_benign_malignant:
+            d['y'] = 0.0 if d['benign_malignant'] == 'benign' else 1.0
+        else:
+            d['y'] = float(CLASSES.index(d['diagnosis']))
 
     split_idx = int(len(data)*train_percentage)
     train_data = data[:split_idx]
@@ -251,3 +265,7 @@ def prepare_data(train_percentage=0.8, img_width=128, img_length=128, max_imgs_t
         test_y.append(t['y'])
 
     return np.asarray(train_X), np.asarray(train_y), np.asarray(test_X), np.asarray(test_y)
+
+def prepare_gan_data(img_width=128, img_length=128, max_imgs_to_use=256, benign_malignant=True):
+    data = get_local_dataset_list({'type': ['dermoscopic']})[:max_imgs_to_use]
+    return np.asarray([convert_to_array(d['name'], img_width, img_length) for d in data])
