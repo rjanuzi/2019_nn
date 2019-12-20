@@ -1,10 +1,11 @@
 import tensorflow as tf
-from tensorflow.keras import layers, models
+from tensorflow.keras import layers, models, metrics, losses
 
 import os
 from time import time
 from PIL import Image
 import numpy as np
+from datetime import datetime
 
 from dataset import  prepare_gan_data
 from _telegram import send_simple_message, send_img
@@ -22,11 +23,21 @@ DISCRIMINATOR_MODEL_BKP_NAME = 'gan_discriminator_model.h5'
 USE_EXISTING_MODEL = False
 
 IMGS_SIZE = 128
-IMGS_TO_USE = 16
+IMGS_TO_USE = 32
 BATCH_SIZE = 4
 NOISE_DIM = 100
 EPOCHS = 500
-EXAMPLES_TO_GENERATE = 1
+EXAMPLES_TO_GENERATE = 2
+
+
+# Tensorboard logging
+current_time = datetime.now().strftime("%Y%m%d-%H%M%S")
+train_generator_log_dir = 'logs/gan/' + current_time + '/train_generator'
+train_discriminator_log_dir = 'logs/gan/' + current_time + '/train_discriminator'
+train_generator_summary_writer = tf.summary.create_file_writer(train_generator_log_dir)
+train_discriminator_summary_writer = tf.summary.create_file_writer(train_discriminator_log_dir)
+train_generator_loss = metrics.Mean('train_generator_loss', dtype=tf.float32)
+train_discriminator_loss = metrics.Mean('train_discriminator_loss', dtype=tf.float32)
 
 def send_telegram(msg):
     if TELEGRAM_ON:
@@ -124,6 +135,10 @@ def train_step(images):
     generator_optimizer.apply_gradients(zip(gradients_of_generator, generator.trainable_variables))
     discriminator_optimizer.apply_gradients(zip(gradients_of_discriminator, discriminator.trainable_variables))
 
+    # Add batch result to losses to generate a history to tensorboard
+    train_generator_loss(gen_loss)
+    train_discriminator_loss(disc_loss)
+
 last_img_path = ''
 def train(dataset, epochs):
     for epoch in range(epochs):
@@ -133,6 +148,14 @@ def train(dataset, epochs):
         for batch_idx in range(BATCH_SIZE, len(dataset)+1, BATCH_SIZE):
             train_step(dataset[last_batch_idx:batch_idx])
             last_batch_idx = batch_idx
+
+        # Write losses to tensorboard logs
+        with train_generator_summary_writer.as_default():
+            tf.summary.scalar('loss', train_generator_loss.result(), step=epoch)
+        with train_discriminator_summary_writer.as_default():
+            tf.summary.scalar('loss', train_discriminator_loss.result(), step=epoch)
+
+        print('Epoch %d -- Gen Loss: %.2f -- Disc Loss: %.2f' % (epoch, train_generator_loss.result(), train_discriminator_loss.result()))
 
         epoch_id = (epoch+1)
         if epoch_id % 5 == 0:
@@ -150,6 +173,10 @@ def train(dataset, epochs):
 
         if epoch_id % 15 == 0:
             send_telegram_img(last_img_path)
+
+        # Reset metrics every epoch
+        train_generator_loss.reset_states()
+        train_discriminator_loss.reset_states()
 
 # Starting...
 # ===============================================================================================

@@ -4,7 +4,7 @@ from PIL import Image
 import numpy as np
 
 import tensorflow as tf
-from tensorflow.keras import layers, models, callbacks
+from tensorflow.keras import layers, models, callbacks, callbacks
 
 import logging
 from time import time
@@ -12,11 +12,12 @@ from time import time
 from _telegram import send_simple_message
 
 import traceback
+from datetime import datetime
 
 FORMAT = '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
 logging.basicConfig(filename=r'cnn_benign_malignant.log', level=logging.INFO, format=FORMAT)
 
-TELEGRAM_ON = True
+TELEGRAM_ON = False
 
 MODEL_BKP_NAME = 'benign_malignant_model.h5'
 USE_EXISTING_MODEL = False
@@ -24,6 +25,7 @@ USE_EXISTING_MODEL = False
 IMGS_WIDTH = 256
 IMGS_LENGTH = 256
 MAX_IMGS_TO_USE = 8192
+# MAX_IMGS_TO_USE = 4
 EPOCHS = 500
 
 def send_telegram(msg):
@@ -68,6 +70,9 @@ class Model_BKP(callbacks.Callback):
 # Starting...
 # ===============================================================================================
 try:
+    log_dir = r'logs\cnn_benign_malignant\%s' % datetime.now().strftime("%Y%m%d-%H%M%S")
+    tensorboard_callback = callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+
     send_telegram('Loading data.')
     # Prepare the train and test data
     train_X, train_y, test_X, test_y = ds.prepare_classification_data(train_percentage=0.8,
@@ -100,7 +105,7 @@ try:
                         epochs=EPOCHS,
                         verbose=0,
                         validation_data=(test_X, test_y),
-                        callbacks=[Model_BKP()])
+                        callbacks=[Model_BKP(), tensorboard_callback])
     run_seconds = (time()-start_time)
 
     logging.info('%s minutes to train.' % int(run_seconds/60))
