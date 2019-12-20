@@ -246,9 +246,10 @@ def prepare_classification_data(train_percentage=0.8, img_width=128, img_length=
     for d in data:
         d['X'] = convert_to_array(d['name'], img_width, img_length)
         if classify_benign_malignant:
-            d['y'] = 0.0 if d['benign_malignant'] == 'benign' else 1.0
+            d['y'] = [0.0 if d['benign_malignant'] == 'benign' else 1.0,
+                        1.0 if d['benign_malignant'] == 'benign' else 0.0]
         else:
-            d['y'] = float(CLASSES.index(d['diagnosis']))
+            d['y'] = float(CLASSES.index(d['diagnosis'])) # TODO Colocar uma classe em cada neuronio
 
     split_idx = int(len(data)*train_percentage)
     train_data = data[:split_idx]

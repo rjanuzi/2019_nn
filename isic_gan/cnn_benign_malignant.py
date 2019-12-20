@@ -24,9 +24,9 @@ USE_EXISTING_MODEL = False
 
 IMGS_WIDTH = 256
 IMGS_LENGTH = 256
-MAX_IMGS_TO_USE = 8192
-# MAX_IMGS_TO_USE = 4
-EPOCHS = 500
+# MAX_IMGS_TO_USE = 8192
+MAX_IMGS_TO_USE = 200
+EPOCHS = 50
 
 def send_telegram(msg):
     if TELEGRAM_ON:
@@ -49,7 +49,7 @@ def create_model():
     model.add(layers.Conv2D(128, (3, 3), activation='relu'))
     model.add(layers.Flatten())
     model.add(layers.Dense(128, activation='relu'))
-    model.add(layers.Dense(1, activation='softmax'))
+    model.add(layers.Dense(2, activation='softmax')) # Two classes
 
     model.summary()
 
