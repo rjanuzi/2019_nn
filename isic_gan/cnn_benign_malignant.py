@@ -20,7 +20,7 @@ logging.basicConfig(filename=r'cnn_benign_malignant.log', level=logging.INFO, fo
 TELEGRAM_ON = True
 
 MODEL_BKP_NAME = 'benign_malignant_model.h5'
-USE_EXISTING_MODEL = True
+USE_EXISTING_MODEL = False
 
 IMGS_WIDTH = 128
 IMGS_LENGTH = 128

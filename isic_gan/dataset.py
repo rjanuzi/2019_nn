@@ -8,6 +8,8 @@ import numpy as np
 
 from random import random, choice, shuffle
 
+from joblib import Parallel, delayed
+
 DATASET_BASE_FOLDER = 'dataset'
 DATASET_LOCAL_PATH = 'dataset/raw'
 DATASET_LOCAL_INDEX_PATH = 'dataset/raw/index.json'
@@ -299,6 +301,9 @@ def prepare_classification_data(train_percentage=0.8, img_width=128, img_length=
     This function loads and prepare the image data from database, providing a
     train list and a test list of data
     '''
+    def append_img(d):
+        return convert_to_array(d['name'], img_width, img_length, d.get('rotate')), d['y']
+
     data = load_index(DATESET_TRAIN_TEST_INDEX_PATH)
     if not data:
         prepare_classification_index(train_percentage, max_imgs_to_use)
@@ -324,14 +329,16 @@ def prepare_classification_data(train_percentage=0.8, img_width=128, img_length=
 
     # Generate arrays of train and test
     train_X, train_y = [], []
-    for t in train_data:
-        train_X.append(convert_to_array(t['name'], img_width, img_length, t.get('rotate')))
-        train_y.append(t['y'])
+    results = Parallel(n_jobs=4)(delayed(append_img)(d) for d in train_data)
+    for r in results:
+        train_X.append(r[0])
+        train_y.append(r[1])
 
     test_X, test_y = [], []
-    for t in test_data:
-        test_X.append(convert_to_array(t['name'], img_width, img_length, t.get('rotate')))
-        test_y.append(t['y'])
+    results = Parallel(n_jobs=4)(delayed(append_img)(d) for d in test_data)
+    for r in results:
+        test_X.append(r[0])
+        test_y.append(r[1])
 
     return np.asarray(train_X), np.asarray(train_y), np.asarray(test_X), np.asarray(test_y)
 
