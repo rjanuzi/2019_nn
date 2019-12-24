@@ -6,9 +6,12 @@ from pathlib import Path
 from PIL import Image
 import numpy as np
 
+from random import random, choice, shuffle
+
 DATASET_BASE_FOLDER = 'dataset'
 DATASET_LOCAL_PATH = 'dataset/raw'
 DATASET_LOCAL_INDEX_PATH = 'dataset/raw/index.json'
+DATESET_TRAIN_TEST_INDEX_PATH = 'train_test_index.json'
 ISIC_API_URL = 'https://isic-archive.com/api/v1/'
 
 CLASSES = ['nevus',
@@ -25,23 +28,23 @@ if not Path(DATASET_BASE_FOLDER).exists():
 if not Path(DATASET_LOCAL_PATH).exists():
     os.mkdir(DATASET_LOCAL_PATH)
 
-def save_index(content):
+def save_index(content, index_path=DATASET_LOCAL_INDEX_PATH):
     content = json.dumps(content)
     try:
-        file = open(DATASET_LOCAL_INDEX_PATH, 'wt')
+        file = open(index_path, 'wt')
         file.write(content)
         file.close()
     except:
         print('[ERROR]: Oops, something really wrong happend saving the index file.')
 
-def load_index(filters={}):
+def load_index(index_path=DATASET_LOCAL_INDEX_PATH):
     try:
-        file = open(DATASET_LOCAL_INDEX_PATH, 'rt')
+        file = open(index_path, 'rt')
         content = file.read()
         file.close()
     except OSError:
         content = {}
-        save_index(content)
+        save_index(content, index_path)
         content = '{}'
     finally:
         return json.loads(content)
@@ -231,38 +234,103 @@ def get_local_dataset_list(filters={}):
     idx = list(load_index().values())
     return list(filter(lambda i: all([i[k] in v for k,v in filters.items()]), idx))
 
-def convert_to_array(img_name, img_width, img_length):
+def convert_to_array(img_name, img_width, img_length, rotate_angle):
     with Image.open(get_img_path(img_name)) as im:
-        img_array = np.asarray(im.resize((img_width, img_length)))
+        im_temp = im.resize((img_width, img_length))
+        if rotate_angle:
+            im_temp = im_temp.rotate(rotate_angle)
+
+        img_array = np.asarray(im_temp)
+
         # return img_array / 255.0 # Normalize the images to [0, 1]
         return (img_array-127.5) / 127.5 # Normalize the images to [-1, 1]
 
-def prepare_classification_data(train_percentage=0.8, img_width=128, img_length=128, max_imgs_to_use=256, classify_benign_malignant=True):
+def balance_classes(bigger_list, smaller_list):
+    '''
+    Balance the two classes list, using random techniques
+    '''
+    while len(bigger_list) > len(smaller_list):
+        tech = random()
+
+        if tech <= .3: # 30% of chance to delete random img from bigger_list
+            bigger_list.pop(int(random()*len(bigger_list)))
+        elif tech <= .5: # 20% of chance to simple duplicate a random img from the smaller_list
+            smaller_list.append(choice(smaller_list).copy())
+        else: # 50% of chance to duplicate a random img from smaller_list with a random rotation
+            copying_img = choice(smaller_list).copy()
+
+            op_temp = random()
+            if op_temp <= .33:
+                copying_img['rotate'] = 90
+            elif op_temp <= .66:
+                copying_img['rotate'] = 180
+            else:
+                copying_img['rotate'] = 270
+
+            if random() <= .5:
+                copying_img['rotate'] *= -1
+
+            smaller_list.append(copying_img)
+
+def prepare_classification_index(train_percentage=0.8, max_imgs_to_use=16384):
+    data = get_local_dataset_list({'type': ['dermoscopic']})[:max_imgs_to_use]
+
+    # {'benign': [img_1, img_2, ..., img_n], 'malignant': [img_m, ...]}
+    data_by_class = {}
+    for d in data:
+        temp_group = data_by_class.get(d['benign_malignant'])
+        if not temp_group:
+            temp_group = []
+            data_by_class[d['benign_malignant']] = temp_group
+        temp_group.append(d)
+
+    # Balance the classes with random rules
+    balance_classes(data_by_class['benign'], data_by_class['malignant'])
+
+    # Shuffle data before split
+    shuffle(data_by_class['benign'])
+    shuffle(data_by_class['malignant'])
+
+    save_index({'benign': data_by_class['benign'], 'malignant': data_by_class['malignant']},
+                DATESET_TRAIN_TEST_INDEX_PATH)
+
+def prepare_classification_data(train_percentage=0.8, img_width=128, img_length=128, max_imgs_to_use=16384):
     '''
     This function loads and prepare the image data from database, providing a
     train list and a test list of data
     '''
-    data = get_local_dataset_list({'type': ['dermoscopic']})[:max_imgs_to_use]
-    for d in data:
-        d['X'] = convert_to_array(d['name'], img_width, img_length)
-        if classify_benign_malignant:
-            d['y'] = [0.0 if d['benign_malignant'] == 'benign' else 1.0,
-                        1.0 if d['benign_malignant'] == 'benign' else 0.0]
-        else:
-            d['y'] = float(CLASSES.index(d['diagnosis'])) # TODO Colocar uma classe em cada neuronio
+    data = load_index(DATESET_TRAIN_TEST_INDEX_PATH)
+    if not data:
+        prepare_classification_index(train_percentage, max_imgs_to_use)
+        data = load_index(DATESET_TRAIN_TEST_INDEX_PATH)
 
-    split_idx = int(len(data)*train_percentage)
-    train_data = data[:split_idx]
-    test_data = data[split_idx:]
+    for d in data['benign']:
+        d['y'] = [1.0, 0.0]
 
+    for d in data['malignant']:
+        d['y'] = [0.0, 1.0]
+
+    # Split train and test data
+    split_idx = int(len(data['benign'])*train_percentage)
+    train_data = data['benign'][:split_idx]
+    test_data = data['benign'][split_idx:]
+    split_idx = int(len(data['malignant'])*train_percentage)
+    train_data += data['malignant'][:split_idx]
+    test_data += data['malignant'][split_idx:]
+
+    # Mixeup classes
+    shuffle(train_data)
+    shuffle(test_data)
+
+    # Generate arrays of train and test
     train_X, train_y = [], []
     for t in train_data:
-        train_X.append(t['X'])
+        train_X.append(convert_to_array(t['name'], img_width, img_length, t.get('rotate')))
         train_y.append(t['y'])
 
     test_X, test_y = [], []
     for t in test_data:
-        test_X.append(t['X'])
+        test_X.append(convert_to_array(t['name'], img_width, img_length, t.get('rotate')))
         test_y.append(t['y'])
 
     return np.asarray(train_X), np.asarray(train_y), np.asarray(test_X), np.asarray(test_y)
