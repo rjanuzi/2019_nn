@@ -244,8 +244,8 @@ def convert_to_array(img_name, img_width, img_length, rotate_angle):
 
         img_array = np.asarray(im_temp)
 
-        # return img_array / 255.0 # Normalize the images to [0, 1]
-        return (img_array-127.5) / 127.5 # Normalize the images to [-1, 1]
+        return img_array / 255.0 # Normalize the images to [0, 1]
+        # return (img_array-127.5) / 127.5 # Normalize the images to [-1, 1]
 
 def balance_classes(bigger_list, smaller_list):
     '''
@@ -254,11 +254,11 @@ def balance_classes(bigger_list, smaller_list):
     while len(bigger_list) > len(smaller_list):
         tech = random()
 
-        if tech <= .3: # 30% of chance to delete random img from bigger_list
+        if tech <= .5: # 50% of chance to delete random img from bigger_list
             bigger_list.pop(int(random()*len(bigger_list)))
-        elif tech <= .5: # 20% of chance to simple duplicate a random img from the smaller_list
+        elif tech <= .7: # 20% of chance to simple duplicate a random img from the smaller_list
             smaller_list.append(choice(smaller_list).copy())
-        else: # 50% of chance to duplicate a random img from smaller_list with a random rotation
+        else: # 30% of chance to duplicate a random img from smaller_list with a random rotation
             copying_img = choice(smaller_list).copy()
 
             op_temp = random()
@@ -268,9 +268,6 @@ def balance_classes(bigger_list, smaller_list):
                 copying_img['rotate'] = 180
             else:
                 copying_img['rotate'] = 270
-
-            if random() <= .5:
-                copying_img['rotate'] *= -1
 
             smaller_list.append(copying_img)
 
