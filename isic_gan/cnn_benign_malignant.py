@@ -26,8 +26,8 @@ IMGS_WIDTH = 128
 IMGS_LENGTH = 128
 BATCH_SIZE = 64
 MAX_IMGS_TO_USE = 20000
-# MAX_IMGS_TO_USE = 64
-EPOCHS = 250
+# MAX_IMGS_TO_USE = 32
+EPOCHS = 200
 
 def send_telegram(msg):
     if TELEGRAM_ON:
@@ -60,6 +60,19 @@ def create_model():
                   metrics=['accuracy', 'mse'])
 
     return model
+
+def generate_final_result(model):
+    send_telegram('Generating final result...')
+    test_X, test_y, data_dict = ds.prepare_classification_final_data(img_width=IMGS_WIDTH, img_length=IMGS_LENGTH)
+    ys = model.predict(test_X)
+    for i in range(len(data_dict)):
+        y = ys[i]
+        data_dict[i]['predicted'] = [round(float(y[0]), 4), round(float(y[1]), 4)] # To list (json compatibility)
+        data_dict[i]['predicted_label'] = 'benign' if y[0] > y[1] else 'malignant'
+        data_dict[i]['hit'] = 1 if data_dict[i]['predicted_label'] == data_dict[i]['benign_malignant'] else 0
+
+    ds.save_index(data_dict, 'final_result.json')
+    send_telegram('Done.')
 
 class Model_BKP(callbacks.Callback):
     def on_epoch_end(self, epoch, logs={}):
@@ -117,10 +130,12 @@ try:
 
     # Evaluate on test dataset
     test_loss, test_acc, test_mse = model.evaluate(test_X,  test_y, verbose=2)
-    ys = model.predict(test_X)
 
     logging.info('\nTest loss: %.4f\nTest Accuracy: %.4f\nTest MSE: %.4f' % (test_loss, test_acc, test_mse))
     send_telegram('Test loss: %.4f\nTest Accuracy: %.4f\nTest MSE: %.4f' % (test_loss, test_acc, test_mse))
+
+    # Generate final result
+    generate_final_result(model)
 except:
     logging.error(traceback.format_exc())
     send_telegram('Some error occured')

@@ -10,10 +10,13 @@ from random import random, choice, shuffle
 
 from joblib import Parallel, delayed
 
+import logging
+
 DATASET_BASE_FOLDER = 'dataset'
 DATASET_LOCAL_PATH = 'dataset/raw'
 DATASET_LOCAL_INDEX_PATH = 'dataset/raw/index.json'
 DATESET_TRAIN_TEST_INDEX_PATH = 'train_test_index.json'
+DATASET_NOT_USED_INDEX_PATH = 'not_used_imgs_index.json'
 ISIC_API_URL = 'https://isic-archive.com/api/v1/'
 
 CLASSES = ['nevus',
@@ -236,7 +239,7 @@ def get_local_dataset_list(filters={}):
     idx = list(load_index().values())
     return list(filter(lambda i: all([i[k] in v for k,v in filters.items()]), idx))
 
-def convert_to_array(img_name, img_width, img_length, rotate_angle):
+def convert_to_array(img_name, img_width, img_length, rotate_angle=None):
     with Image.open(get_img_path(img_name)) as im:
         im_temp = im.resize((img_width, img_length))
         if rotate_angle:
@@ -251,15 +254,21 @@ def balance_classes(bigger_list, smaller_list):
     '''
     Balance the two classes list, using random techniques
     '''
+    total_removed = 0
+    total_duplicated = 0
+    total_rotated = 0
     while len(bigger_list) > len(smaller_list):
         tech = random()
 
         if tech <= .5: # 50% of chance to delete random img from bigger_list
             bigger_list.pop(int(random()*len(bigger_list)))
+            total_removed += 1
         elif tech <= .7: # 20% of chance to simple duplicate a random img from the smaller_list
             smaller_list.append(choice(smaller_list).copy())
+            total_duplicated += 1
         else: # 30% of chance to duplicate a random img from smaller_list with a random rotation
             copying_img = choice(smaller_list).copy()
+            total_rotated += 1
 
             op_temp = random()
             if op_temp <= .33:
@@ -271,8 +280,12 @@ def balance_classes(bigger_list, smaller_list):
 
             smaller_list.append(copying_img)
 
+    logging.info('\nBalacing: %d removed, %d duplicated and %d rotated.' % (total_removed, total_duplicated, total_rotated))
+
 def prepare_classification_index(train_percentage=0.8, max_imgs_to_use=16384):
-    data = get_local_dataset_list({'type': ['dermoscopic']})[:max_imgs_to_use]
+    data = get_local_dataset_list({'type': ['dermoscopic']})
+    not_using_data = data[max_imgs_to_use:]
+    data = data[:max_imgs_to_use]
 
     # {'benign': [img_1, img_2, ..., img_n], 'malignant': [img_m, ...]}
     data_by_class = {}
@@ -293,6 +306,13 @@ def prepare_classification_index(train_percentage=0.8, max_imgs_to_use=16384):
     save_index({'benign': data_by_class['benign'], 'malignant': data_by_class['malignant']},
                 DATESET_TRAIN_TEST_INDEX_PATH)
 
+    for d in not_using_data:
+        if d['benign_malignant'] == 'benign':
+            d['y'] = [1.0, 0.0]
+        else:
+            d['y'] = [0.0, 1.0]
+    save_index(not_using_data, DATASET_NOT_USED_INDEX_PATH)
+
 def prepare_classification_data(train_percentage=0.8, img_width=128, img_length=128, max_imgs_to_use=16384):
     '''
     This function loads and prepare the image data from database, providing a
@@ -301,10 +321,8 @@ def prepare_classification_data(train_percentage=0.8, img_width=128, img_length=
     def append_img(d):
         return convert_to_array(d['name'], img_width, img_length, d.get('rotate')), d['y']
 
+    prepare_classification_index(train_percentage, max_imgs_to_use)
     data = load_index(DATESET_TRAIN_TEST_INDEX_PATH)
-    if not data:
-        prepare_classification_index(train_percentage, max_imgs_to_use)
-        data = load_index(DATESET_TRAIN_TEST_INDEX_PATH)
 
     for d in data['benign']:
         d['y'] = [1.0, 0.0]
@@ -338,6 +356,20 @@ def prepare_classification_data(train_percentage=0.8, img_width=128, img_length=
         test_y.append(r[1])
 
     return np.asarray(train_X), np.asarray(train_y), np.asarray(test_X), np.asarray(test_y)
+
+def prepare_classification_final_data(img_width, img_length):
+    def append_img(d):
+        return convert_to_array(d['name'], img_width, img_length), d['y']
+
+    data = load_index(DATASET_NOT_USED_INDEX_PATH)
+
+    test_X, test_y = [], []
+    results = Parallel(n_jobs=4)(delayed(append_img)(d) for d in data)
+    for r in results:
+        test_X.append(r[0])
+        test_y.append(r[1])
+
+    return np.asarray(test_X), test_y, data
 
 def prepare_gan_data(img_width=128, img_length=128, max_imgs_to_use=256, benign_malignant=True):
     data = get_local_dataset_list({'type': ['dermoscopic']})[:max_imgs_to_use]
