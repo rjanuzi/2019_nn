@@ -282,7 +282,7 @@ def balance_classes(bigger_list, smaller_list):
 
     logging.info('\nBalacing: %d removed, %d duplicated and %d rotated.' % (total_removed, total_duplicated, total_rotated))
 
-def prepare_classification_index(train_percentage=0.8, max_imgs_to_use=16384):
+def prepare_classification_index(train_percentage, max_imgs_to_use):
     data = get_local_dataset_list({'type': ['dermoscopic']})
     not_using_data = data[max_imgs_to_use:]
     data = data[:max_imgs_to_use]
@@ -313,7 +313,7 @@ def prepare_classification_index(train_percentage=0.8, max_imgs_to_use=16384):
             d['y'] = [0.0, 1.0]
     save_index(not_using_data, DATASET_NOT_USED_INDEX_PATH)
 
-def prepare_classification_data(train_percentage=0.8, img_width=128, img_length=128, max_imgs_to_use=16384):
+def prepare_classification_data(train_percentage, img_width, img_length, max_imgs_to_use):
     '''
     This function loads and prepare the image data from database, providing a
     train list and a test list of data
@@ -371,6 +371,6 @@ def prepare_classification_final_data(img_width, img_length):
 
     return np.asarray(test_X), test_y, data
 
-def prepare_gan_data(img_width=128, img_length=128, max_imgs_to_use=256, benign_malignant=True):
+def prepare_gan_data(img_width, img_length, max_imgs_to_use):
     data = get_local_dataset_list({'type': ['dermoscopic']})[:max_imgs_to_use]
     return np.asarray([convert_to_array(d['name'], img_width, img_length) for d in data])

@@ -25,7 +25,8 @@ USE_EXISTING_MODEL = False
 IMGS_WIDTH = 128
 IMGS_LENGTH = 128
 BATCH_SIZE = 64
-MAX_IMGS_TO_USE = 20000
+# BATCH_SIZE = 2
+MAX_IMGS_TO_USE = 16384
 # MAX_IMGS_TO_USE = 32
 EPOCHS = 200
 
@@ -65,14 +66,26 @@ def generate_final_result(model):
     send_telegram('Generating final result...')
     test_X, test_y, data_dict = ds.prepare_classification_final_data(img_width=IMGS_WIDTH, img_length=IMGS_LENGTH)
     ys = model.predict(test_X)
+    csv_string = 'img_name;benign_malignant;predicted_label;hit\n'
     for i in range(len(data_dict)):
         y = ys[i]
         data_dict[i]['predicted'] = [round(float(y[0]), 4), round(float(y[1]), 4)] # To list (json compatibility)
         data_dict[i]['predicted_label'] = 'benign' if y[0] > y[1] else 'malignant'
         data_dict[i]['hit'] = 1 if data_dict[i]['predicted_label'] == data_dict[i]['benign_malignant'] else 0
 
+        csv_string += '%s;%s;%s;%d\n' % (data_dict[i]['name'], data_dict[i]['benign_malignant'],data_dict[i]['predicted_label'],data_dict[i]['hit'])
+
+    # Save files
     ds.save_index(data_dict, 'final_result.json')
+    with open('final_result.csv', 'w') as f:
+        f.write(csv_string)
+
+    # Send results msgs and save logs
     send_telegram('Done.')
+    hits = sum([d['hit'] for d in data_dict])
+    total_tests = len(data_dict)
+    logging.info('Hits: %d. Total: %d. Acc: %.2f%%' % (hits, total_tests, (hits/total_tests)*100.))
+    send_telegram('Hits: %d. Total: %d. Acc: %.2f%%' % (hits, total_tests, (hits/total_tests)*100.))
 
 class Model_BKP(callbacks.Callback):
     def on_epoch_end(self, epoch, logs={}):
@@ -123,6 +136,10 @@ try:
                         validation_data=(test_X, test_y),
                         callbacks=[Model_BKP(), tensorboard_callback])
     run_seconds = (time()-start_time)
+
+    logging.info('Saving final model.')
+    send_telegram('Saving final model.')
+    model.save(MODEL_BKP_NAME)
 
     logging.info('%s minutes to train.' % int(run_seconds/60))
     send_telegram('Training ended. (%s min)' % int(run_seconds/60))

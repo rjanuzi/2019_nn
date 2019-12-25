@@ -8,3 +8,4 @@ dataset
 *.log
 logs
 *.json
+*.csv
