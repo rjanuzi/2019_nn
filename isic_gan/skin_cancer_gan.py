@@ -27,11 +27,11 @@ DISCRIMINATOR_MODEL_BKP_NAME = 'gan_discriminator_model.h5'
 USE_EXISTING_MODEL = False
 
 IMGS_SIZE = 128
-IMGS_TO_USE = 8
-BATCH_SIZE = 2
-NOISE_DIM = 10
-EPOCHS = 50
-EXAMPLES_TO_GENERATE = 1
+IMGS_TO_USE = 2048
+BATCH_SIZE = 64
+NOISE_DIM = 100
+EPOCHS = 300
+EXAMPLES_TO_GENERATE = 5
 
 # Tensorboard logging
 current_time = datetime.now().strftime("%Y%m%d-%H%M%S")
