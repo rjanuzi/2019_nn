@@ -95,6 +95,8 @@ def download_imgs(imgs=100, start_offset=0):
     current_offset = start_offset
     imgs_to_list = 200
 
+    print('Downloading imgs...')
+
     while True:
 
         if downloaded >= imgs:
@@ -138,7 +140,7 @@ def download_imgs(imgs=100, start_offset=0):
 
         current_offset += imgs_to_list
 
-        print("%d downloaded imgs (%.2f) --- current_offset: %d" % (downloaded, (downloaded/imgs)*100, current_offset) )
+        print("%d downloaded imgs (%.2f%%) --- current_offset: %d" % (downloaded, (downloaded/imgs)*100, current_offset) )
 
 def get_dataset_image_types():
     index = load_index()
@@ -372,5 +374,10 @@ def prepare_classification_final_data(img_width, img_length):
     return np.asarray(test_X), test_y, data
 
 def prepare_gan_data(img_width, img_length, max_imgs_to_use):
-    data = get_local_dataset_list({'type': ['dermoscopic']})[:max_imgs_to_use]
-    return np.asarray([convert_to_array(d['name'], img_width, img_length) for d in data])
+    def append_img(d):
+        return convert_to_array(d['name'], img_width, img_length)
+
+    data = get_local_dataset_list({'type': ['dermoscopic'], 'benign_malignant': 'malignant'})[5:max_imgs_to_use+5]
+
+    results = Parallel(n_jobs=4)(delayed(append_img)(d) for d in data)
+    return np.asarray(results)

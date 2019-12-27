@@ -6,6 +6,7 @@ from time import time
 from PIL import Image
 import numpy as np
 from datetime import datetime
+from pathlib import Path
 
 from dataset import  prepare_gan_data
 from _telegram import send_simple_message, send_img
@@ -16,6 +17,9 @@ import traceback
 FORMAT = '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
 logging.basicConfig(filename=r'skin_cancer_gan.log', level=logging.INFO, format=FORMAT)
 
+if not Path('generated_imgs').exists():
+    os.mkdir('generated_imgs')
+
 TELEGRAM_ON = False
 
 GENERATOR_MODEL_BKP_NAME = 'gan_generator_model.h5'
@@ -23,12 +27,11 @@ DISCRIMINATOR_MODEL_BKP_NAME = 'gan_discriminator_model.h5'
 USE_EXISTING_MODEL = False
 
 IMGS_SIZE = 128
-IMGS_TO_USE = 32
-BATCH_SIZE = 4
-NOISE_DIM = 100
-EPOCHS = 500
-EXAMPLES_TO_GENERATE = 2
-
+IMGS_TO_USE = 8
+BATCH_SIZE = 2
+NOISE_DIM = 10
+EPOCHS = 50
+EXAMPLES_TO_GENERATE = 1
 
 # Tensorboard logging
 current_time = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -67,12 +70,17 @@ def make_generator_model():
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
-    model.add(layers.Conv2DTranspose(128, (5, 5), strides=(4, 4), padding='same', use_bias=False))
+    model.add(layers.Conv2DTranspose(128, (2, 2), strides=(2, 2), padding='same', use_bias=False))
+    assert model.output_shape == (None, 32, 32, 128)
+    model.add(layers.BatchNormalization())
+    model.add(layers.LeakyReLU())
+
+    model.add(layers.Conv2DTranspose(128, (4, 4), strides=(2, 2), padding='same', use_bias=False))
     assert model.output_shape == (None, 64, 64, 128)
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
-    model.add(layers.Conv2DTranspose(3, (5, 5), strides=(2, 2), padding='same', use_bias=False, activation='tanh'))
+    model.add(layers.Conv2DTranspose(3, (8, 8), strides=(2, 2), padding='same', use_bias=False, activation='tanh'))
     assert model.output_shape == (None, IMGS_SIZE, IMGS_SIZE, 3)
 
     model.summary()
@@ -86,7 +94,15 @@ def make_discriminator_model():
     model.add(layers.LeakyReLU())
     model.add(layers.Dropout(0.2))
 
-    model.add(layers.Conv2D(128, (5, 5), strides=(1, 1), padding='same'))
+    model.add(layers.Conv2D(128, (2, 2), strides=(1, 1), padding='same'))
+    model.add(layers.LeakyReLU())
+    model.add(layers.Dropout(0.2))
+
+    model.add(layers.Conv2D(128, (4, 4), strides=(1, 1), padding='same'))
+    model.add(layers.LeakyReLU())
+    model.add(layers.Dropout(0.2))
+
+    model.add(layers.Conv2D(128, (8, 8), strides=(1, 1), padding='same'))
     model.add(layers.LeakyReLU())
     model.add(layers.Dropout(0.2))
 
@@ -98,11 +114,11 @@ def make_discriminator_model():
     return model
 
 def show_generated_img(generated_data):
-    img = Image.fromarray(np.uint8((generated_image[0]+128)*2))
+    img = Image.fromarray(np.uint8(generated_image[0]*255.0))
     img.show()
 
 def save_generated_img(generated_img, file_name):
-    img = Image.fromarray(np.uint8((generated_img+128)*2))
+    img = Image.fromarray(np.uint8(generated_img*255.0))
     img.save(r'generated_imgs\%s.jpeg' % file_name)
 
 def discriminator_loss(real_output, fake_output):
@@ -156,23 +172,26 @@ def train(dataset, epochs):
             tf.summary.scalar('loss', train_discriminator_loss.result(), step=epoch)
 
         print('Epoch %d -- Gen Loss: %.2f -- Disc Loss: %.2f' % (epoch, train_generator_loss.result(), train_discriminator_loss.result()))
+        logging.info('Epoch %d -- Gen Loss: %.2f -- Disc Loss: %.2f' % (epoch, train_generator_loss.result(), train_discriminator_loss.result()))
 
         epoch_id = (epoch+1)
         if epoch_id % 5 == 0:
             generator.save(GENERATOR_MODEL_BKP_NAME)
             discriminator.save(DISCRIMINATOR_MODEL_BKP_NAME)
-            temp_images = generator(seeds, training=False)
-
-            for seed_id in range(len(seeds)):
-                save_generated_img(temp_images[seed_id], '%d_%d_generated' % (seed_id, epoch_id))
-                last_img_path = r'generated_imgs\%d_%d_generated.jpeg' % (seed_id, epoch_id)
 
             send_telegram('Training reached epoch %d (%.2f %%)' % (epoch_id, (epoch_id/EPOCHS)*100.0))
-            logging.info('Time for epoch %d is %.2f seconds.' % (epoch_id, time()-start))
+            send_telegram('Gen Loss: %.2f -- Disc Loss: %.2f' % (train_generator_loss.result(), train_discriminator_loss.result()))
             print('Time for epoch %d is %.2f seconds.' % (epoch_id, time()-start))
+            logging.info('Time for epoch %d is %.2f seconds.' % (epoch_id, time()-start))
 
-        if epoch_id % 15 == 0:
+        if epoch_id % 10 == 0:
             send_telegram_img(last_img_path)
+
+        # Save samples imgs for epoch
+        temp_images = generator(seeds, training=False)
+        for seed_id in range(len(seeds)):
+            save_generated_img(temp_images[seed_id], '%d_%d_generated' % (seed_id, epoch_id))
+            last_img_path = r'generated_imgs\%d_%d_generated.jpeg' % (seed_id, epoch_id)
 
         # Reset metrics every epoch
         train_generator_loss.reset_states()
@@ -182,9 +201,11 @@ def train(dataset, epochs):
 # ===============================================================================================
 try:
     send_telegram('Preparing data...')
-    train_images = prepare_gan_data(IMGS_SIZE, IMGS_SIZE, IMGS_TO_USE, benign_malignant=True)
+    train_images = prepare_gan_data(IMGS_SIZE, IMGS_SIZE, IMGS_TO_USE)
     train_images = train_images.reshape(train_images.shape[0], IMGS_SIZE, IMGS_SIZE, 3).astype('float32')
     seeds = np.random.randn(EXAMPLES_TO_GENERATE, NOISE_DIM)
+
+    send_telegram('%d images loaded.' % len(train_images))
 
     send_telegram('Creating models')
     if USE_EXISTING_MODEL:
