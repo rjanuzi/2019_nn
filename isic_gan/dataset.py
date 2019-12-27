@@ -377,7 +377,7 @@ def prepare_gan_data(img_width, img_length, max_imgs_to_use):
     def append_img(d):
         return convert_to_array(d['name'], img_width, img_length)
 
-    data = get_local_dataset_list({'type': ['dermoscopic'], 'benign_malignant': 'malignant'})[5:max_imgs_to_use+5]
+    data = get_local_dataset_list({'type': ['dermoscopic'], 'benign_malignant': ['malignant']})[:max_imgs_to_use]
 
     results = Parallel(n_jobs=4)(delayed(append_img)(d) for d in data)
     return np.asarray(results)
