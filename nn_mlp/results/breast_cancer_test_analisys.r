@@ -1,79 +1,38 @@
 library(ggplot2)
+library(readxl)
+library(readr)
 
-# Equilibrados
-breast_cancer_results$hidden_layer_sizes <- factor(breast_cancer_results$hidden_layer_sizes)
-summary(breast_cancer_results$hidden_layer_sizes)
-qplot(data=breast_cancer_results, x=hidden_layer_sizes)
+breast_train <- read_excel("breast_cancer_train.xlsx")
 
-breast_cancer_results$activation <- factor(breast_cancer_results$activation)
-qplot(data=breast_cancer_results, x=activation)
+# Convert to factors
+breast_train$hidden_layer_sizes <- factor(breast_train$hidden_layer_sizes)
+breast_train$alpha <- factor(breast_train$alpha)
+breast_train$learning_rate_init <- factor(breast_train$learning_rate_init)
+breast_train$power_t <- factor(breast_train$power_t)
 
-breast_cancer_results$solver <- factor(breast_cancer_results$solver)
-qplot(data=breast_cancer_results, x=solver)
+# Train accuracy distribution
+ggplot(breast_train, aes(x=mean_accuracy)) +
+  geom_histogram(binwidth=0.01, color="black", fill="light blue") +
+  scale_x_continuous(limits=c(0.4,1.1), breaks=seq(0, 1, 0.1)) +
+  scale_y_continuous(breaks=seq(0, 8500, 500))
+ggsave("breast_train_acc_distribution.png")
 
-summary(breast_cancer_results$alpha)
-qplot(data=breast_cancer_results, x=alpha)
+# Train accuracy distribution > 70%
+top <- breast_train[breast_train$mean_accuracy > 0.7, ]
+nrow(top)
+ggplot(top, aes(x=mean_accuracy)) +
+  geom_histogram(binwidth=0.01, color="black", fill="light blue") +
+  scale_x_continuous(limits=c(0.7,0.76), breaks=seq(0, 1, 0.01)) +
+  scale_y_continuous(breaks=seq(0, 300, 10))
+ggsave("breast_train_acc_distribution_top.png")
 
-breast_cancer_results$learning_rate <- factor(breast_cancer_results$learning_rate)
-summary(breast_cancer_results$learning_rate)
-qplot(data=breast_cancer_results, x=learning_rate)
+# Train accuracy distribution > 99%
+top <- breast_train[breast_train$mean_accuracy > 0.74, ]
+nrow(top)
 
-summary(breast_cancer_results$learning_rate_init)
-qplot(data=breast_cancer_results, x=learning_rate_init)
-
-summary(breast_cancer_results$power_t)
-qplot(data=breast_cancer_results, x=power_t)
-
-summary(breast_cancer_results$max_iter)
-ggplot(breast_cancer_results, aes(x=max_iter)) + 
-  geom_histogram(color="black", fill="lightblue", binwidth=30)
-
-summary(breast_cancer_results$momentum)
-ggplot(breast_cancer_results, aes(x=momentum)) + 
-  geom_histogram(color="black", fill="lightblue", binwidth=0.01)
-
-summary(breast_cancer_results$beta_1)
-ggplot(breast_cancer_results, aes(x=beta_1)) + 
-  geom_histogram(color="black", fill="lightblue", binwidth=0.01)
-
-summary(breast_cancer_results$beta_2)
-ggplot(breast_cancer_results, aes(x=beta_2)) + 
-  geom_histogram(color="black", fill="lightblue", binwidth=0.01)
-
-summary(breast_cancer_results$epsilon)
-ggplot(breast_cancer_results, aes(x=epsilon)) + 
-  geom_histogram(color="black", fill="lightblue", binwidth=0.00000000001)
-
-summary(breast_cancer_results$n_iter_no_change)
-ggplot(breast_cancer_results, aes(x=n_iter_no_change)) + 
-  geom_histogram(color="black", fill="lightblue", binwidth=1)
-
-summary(breast_cancer_results$mean_accuracy)
-ggplot(breast_cancer_results, aes(x=mean_accuracy)) + 
-  geom_histogram(color="black", fill="lightblue", binwidth=0.01) +
-  facet_wrap(~max_iter)
-
-ggplot(breast_cancer_results, aes(x=factor(learning_rate_init), y=mean_accuracy)) +
+# Test accuracies
+breast_test <- read_delim("breast_test_accs.csv", delim=";", escape_double=FALSE, trim_ws=TRUE)
+ggplot(breast_test, aes(y=acc)) +
   geom_boxplot() +
-  facet_wrap(~max_iter)
-
-ggplot(breast_cancer_results, aes(x=factor(hidden_layer_sizes), y=mean_accuracy)) +
-  geom_boxplot()
-ggplot(breast_cancer_results, aes(x=factor(alpha), y=mean_accuracy)) +
-  geom_boxplot()
-ggplot(breast_cancer_results, aes(x=factor(learning_rate_init), y=mean_accuracy)) +
-  geom_boxplot()
-ggplot(breast_cancer_results, aes(x=factor(power_t), y=mean_accuracy)) +
-  geom_boxplot()
-ggplot(breast_cancer_results, aes(x=factor(max_iter), y=mean_accuracy)) +
-  geom_boxplot()
-ggplot(breast_cancer_results, aes(x=factor(momentum), y=mean_accuracy)) +
-  geom_boxplot()
-ggplot(breast_cancer_results, aes(x=factor(beta_1), y=mean_accuracy)) +
-  geom_boxplot()
-ggplot(breast_cancer_results, aes(x=factor(beta_2), y=mean_accuracy)) +
-  geom_boxplot()
-ggplot(breast_cancer_results, aes(x=factor(epsilon), y=mean_accuracy)) +
-  geom_boxplot()
-ggplot(breast_cancer_results, aes(x=factor(n_iter_no_change), y=mean_accuracy)) +
-  geom_boxplot()
+  scale_y_continuous(limits=c(0.5,0.8), breaks=seq(0, 1, 0.05))
+ggsave("breast_test_accs.png")

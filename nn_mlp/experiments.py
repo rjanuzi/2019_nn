@@ -11,9 +11,9 @@ from sklearn.model_selection import cross_val_score
 from sklearn.neural_network import MLPRegressor as mlp
 
 # SCORING = 'accuracy' # Classification
-SCORING = 'neg_mean_squared_error' # Regression
+# SCORING = 'neg_mean_squared_error' # Regression
 # SCORING = 'max_error' # Regression
-# SCORING = 'r2' # Regression
+SCORING = 'r2' # Regression
 
 # Datasets
 # from breast_cancer_data import get_data

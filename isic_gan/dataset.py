@@ -17,6 +17,7 @@ DATASET_LOCAL_PATH = 'dataset/raw'
 DATASET_LOCAL_INDEX_PATH = 'dataset/raw/index.json'
 DATESET_TRAIN_TEST_INDEX_PATH = 'train_test_index.json'
 DATASET_NOT_USED_INDEX_PATH = 'not_used_imgs_index.json'
+PROCESSED_IMGS_FOLDER = 'dataset/treated'
 ISIC_API_URL = 'https://isic-archive.com/api/v1/'
 
 CLASSES = ['nevus',
@@ -32,6 +33,8 @@ if not Path(DATASET_BASE_FOLDER).exists():
     os.mkdir(DATASET_BASE_FOLDER)
 if not Path(DATASET_LOCAL_PATH).exists():
     os.mkdir(DATASET_LOCAL_PATH)
+if not Path(PROCESSED_IMGS_FOLDER).exists():
+    os.mkdir(PROCESSED_IMGS_FOLDER)
 
 def save_index(content, index_path=DATASET_LOCAL_INDEX_PATH):
     content = json.dumps(content)
@@ -241,16 +244,19 @@ def get_local_dataset_list(filters={}):
     idx = list(load_index().values())
     return list(filter(lambda i: all([i[k] in v for k,v in filters.items()]), idx))
 
-def convert_to_array(img_name, img_width, img_length, rotate_angle=None):
+def convert_to_array(img_name, img_width, img_length, rotate_angle=None, save_imgs=False):
     with Image.open(get_img_path(img_name)) as im:
         im_temp = im.resize((img_width, img_length))
         if rotate_angle:
             im_temp = im_temp.rotate(rotate_angle)
 
+        if save_imgs:
+            im_temp.save('%s/%s.jpg' % (PROCESSED_IMGS_FOLDER, img_name))
+
         img_array = np.asarray(im_temp)
 
-        return img_array / 255.0 # Normalize the images to [0, 1]
-        # return (img_array-127.5) / 127.5 # Normalize the images to [-1, 1]
+        return (img_array / 255.0) # Normalize the images to [0, 1]
+        # return ((img_array-127.5) / 127.5) # Normalize the images to [-1, 1]
 
 def balance_classes(bigger_list, smaller_list):
     '''
@@ -315,13 +321,13 @@ def prepare_classification_index(train_percentage, max_imgs_to_use):
             d['y'] = [0.0, 1.0]
     save_index(not_using_data, DATASET_NOT_USED_INDEX_PATH)
 
-def prepare_classification_data(train_percentage, img_width, img_length, max_imgs_to_use):
+def prepare_classification_data(train_percentage, img_width, img_length, max_imgs_to_use, save_imgs=False):
     '''
     This function loads and prepare the image data from database, providing a
     train list and a test list of data
     '''
     def append_img(d):
-        return convert_to_array(d['name'], img_width, img_length, d.get('rotate')), d['y']
+        return convert_to_array(d['name'], img_width, img_length, d.get('rotate'), save_imgs=save_imgs), d['y']
 
     prepare_classification_index(train_percentage, max_imgs_to_use)
     data = load_index(DATESET_TRAIN_TEST_INDEX_PATH)
@@ -373,9 +379,11 @@ def prepare_classification_final_data(img_width, img_length):
 
     return np.asarray(test_X), test_y, data
 
-def prepare_gan_data(img_width, img_length, max_imgs_to_use):
+def prepare_gan_data(img_width, img_length, max_imgs_to_use, save_imgs=False):
     def append_img(d):
-        return convert_to_array(d['name'], img_width, img_length)
+        if(d['benign_malignant'] == 'benign'):
+            print('Ueh')
+        return convert_to_array(d['name'], img_width, img_length, save_imgs=save_imgs)
 
     data = get_local_dataset_list({'type': ['dermoscopic'], 'benign_malignant': ['malignant']})[:max_imgs_to_use]
 

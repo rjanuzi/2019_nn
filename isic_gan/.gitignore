@@ -9,4 +9,4 @@ dataset
 logs
 *.json
 *.csv
-generated_imgs
+generated_imgs*
